@@ -3,30 +3,51 @@ let splitLine;
 let canCrossLine = false;
 let shatterPieces = [];
 let shatter = false;
+let sound;
+let keywordInput;
+let currentKeyword = "";
+
+/*function preload() {
+  sound = loadSound('sound.mp3');
+}*/
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  splitLine = width / 2;
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  splitLine = 0; // Centered on the y-axis in WEBGL
+
   // Create figures on both sides of the split screen
   for (let i = 0; i < 10; i++) {
-    let xLeft = random(50, splitLine - 50);
-    let yLeft = random(height / 4, (3 * height) / 4);
-    figures.push(new Figure(xLeft, yLeft, false)); // Perceived external side
+    let xTop = random(-width / 4, width / 4);
+    let yTop = random(-height / 2 + 50, splitLine - 50);
+    figures.push(new Figure(xTop, yTop, false)); // Perceived external side (minority)
   }
   for (let i = 0; i < 30; i++) {
-    let xRight = random(splitLine + 50, width - 50);
-    let yRight = random(50, height - 50);
-    figures.push(new Figure(xRight, yRight, true)); // Inner strength side
+    let xBottom = random(-width / 2 + 50, width / 2 - 50);
+    let yBottom = random(splitLine + 50, height / 2 - 50);
+    let zBottom = random(-200, 200);
+    figures.push(new Figure(xBottom, yBottom, true, zBottom)); // Inner strength side with more 3D depth (majority)
   }
+
+  // Play sound and make it loop
+  //sound.loop();
+
+  // Create input for keyword
+  keywordInput = createInput();
+  keywordInput.position(10, 10);
+  keywordInput.size(200);
+  keywordInput.input(handleKeywordInput);
 }
 
 function draw() {
   background(20);
+  lights(); // Add lighting to create a 3D effect
 
   if (!shatter) {
+    push();
     stroke(255);
     strokeWeight(4);
-    line(splitLine, 0, splitLine, height);
+    line(-width / 2, splitLine, 0, width / 2, splitLine, 0);
+    pop();
   } else {
     for (let piece of shatterPieces) {
       piece.update();
@@ -42,7 +63,7 @@ function draw() {
 }
 
 function mousePressed() {
-  // Move left-side figures when mouse is pressed
+  // Move top-side figures when mouse is pressed
   for (let figure of figures) {
     if (!figure.strong) {
       figure.move();
@@ -50,7 +71,7 @@ function mousePressed() {
   }
 
   // If the mouse is pressed on the middle line, allow all figures to cross and collaborate, and shatter the line
-  if (mouseX > splitLine - 10 && mouseX < splitLine + 10) {
+  if (mouseY > height / 2 - 10 && mouseY < height / 2 + 10) {
     canCrossLine = true;
     for (let figure of figures) {
       figure.collaborate();
@@ -60,7 +81,7 @@ function mousePressed() {
 }
 
 function keyPressed() {
-  // Make left-side figures start moving and bouncing when a key is pressed
+  // Make top-side figures start moving and bouncing when a key is pressed
   for (let figure of figures) {
     if (!figure.strong) {
       figure.startMoving();
@@ -71,16 +92,20 @@ function keyPressed() {
 function shatterLine() {
   shatter = true;
   for (let i = 0; i < 50; i++) {
-    let x = splitLine + random(-10, 10);
-    let y = random(height);
-    let velocity = createVector(random(-3, 3), random(-3, 3));
+    let x = random(-width / 2, width / 2);
+    let y = splitLine + random(-10, 10);
+    let velocity = createVector(random(-3, 3), random(-3, 3), random(-3, 3));
     shatterPieces.push(new ShatterPiece(x, y, velocity));
   }
 }
 
+function handleKeywordInput() {
+  currentKeyword = keywordInput.value().toLowerCase();
+}
+
 class ShatterPiece {
   constructor(x, y, velocity) {
-    this.position = createVector(x, y);
+    this.position = createVector(x, y, 0);
     this.velocity = velocity;
     this.size = random(5, 15);
     this.color = color(255);
@@ -91,22 +116,25 @@ class ShatterPiece {
   }
 
   display() {
-    fill(this.color);
+    push();
+    translate(this.position.x, this.position.y, this.position.z);
+    ambientMaterial(this.color);
     noStroke();
-    ellipse(this.position.x, this.position.y, this.size);
+    sphere(this.size / 2); // Use sphere to create 3D shatter pieces
+    pop();
   }
 }
 
 class Figure {
-  constructor(x, y, strong) {
-    this.position = createVector(x, y);
-    this.velocity = createVector(0, 0);
+  constructor(x, y, strong, z = 0) {
+    this.position = createVector(x, y, z);
+    this.velocity = createVector(0, 0, 0);
     this.size = strong ? random(60, 100) : random(20, 40);
-    this.color = strong ? color(random(50, 200), random(200, 255), random(50, 200)) : color(random(100, 255), random(100, 255), random(100, 255));
+    this.color = strong ? color(random(200, 255), random(50, 150), random(50, 150)) : color(random(100, 255), random(100, 255), random(100, 255));
     this.strong = strong;
     this.pulse = random(0.01, 0.03);
     this.pulseSize = this.size;
-    this.shape = strong ? 'circle' : random(['circle', 'triangle', 'square']);
+    this.shape = strong ? 'sphere' : random(['sphere', 'box']);
     this.isHarmonizing = false;
     this.harmonyProgress = 0;
   }
@@ -119,14 +147,17 @@ class Figure {
     this.position.add(this.velocity);
 
     // Bounce off walls, respecting whether they can cross the line
-    if (this.position.x < 0 || (this.position.x > splitLine && !canCrossLine && !this.strong)) {
-      this.velocity.x *= -1;
-    }
-    if (this.position.x > width) {
-      this.velocity.x *= -1;
-    }
-    if (this.position.y < 0 || this.position.y > height) {
+    if (this.position.y < -height / 2 || (this.position.y > splitLine && !canCrossLine && !this.strong)) {
       this.velocity.y *= -1;
+    }
+    if (this.position.y > height / 2) {
+      this.velocity.y *= -1;
+    }
+    if (this.position.x < -width / 2 || this.position.x > width / 2) {
+      this.velocity.x *= -1;
+    }
+    if (this.position.z < -200 || this.position.z > 200) {
+      this.velocity.z *= -1;
     }
 
     // If collaboration occurs, gradually change to represent harmony over 10 seconds
@@ -135,54 +166,92 @@ class Figure {
       if (this.harmonyProgress > 1) this.harmonyProgress = 1;
       this.color = lerpColor(this.color, color(100, 200, 255), this.harmonyProgress);
       this.size = lerp(this.size, 80, this.harmonyProgress);
-      this.shape = 'circle';
+      this.shape = 'sphere';
+    }
+
+    switch (currentKeyword) {
+      case 'resilience':
+        this.color = color(255, 140, 0, 200); // Orange for resilience
+        break;
+      case 'identity':
+        this.shape = 'cone';
+        this.color = color(128, 0, 128, 200); // Purple for identity
+        break;
+      case 'unity':
+        this.size = 150;
+        this.color = color(0, 255, 127, 220); // Spring green for unity
+        break;
+      case 'diversity':
+        this.color = color(random(255), random(255), random(255), 200);
+        this.shape = random(['sphere', 'cone', 'box']);
+        break;
+      case 'belonging':
+        this.position = createVector(width / 2 + random(-20, 20), height / 2 + random(-20, 20));
+        this.color = color(70, 130, 180, 200); // Steel blue for belonging
+        break;
+      case 'strength':
+        this.size = 170;
+        this.color = color(34, 139, 34, 230); // Forest green for strength
+        break;
+      case 'visibility':
+        this.color = color(255, 215, 0, 230); // Gold for visibility
+        break;
+      case 'heritage':
+        this.shape = 'box';
+        this.color = color(210, 105, 30, 200); // Chocolate for heritage
+        break;
+      case 'empowerment':
+        this.size = 180;
+        this.color = color(255, 0, 255, 220); // Magenta for empowerment
+        break;
+      case 'inclusivity':
+        this.color = color(0, 0, 255, 230); // Blue for inclusivity
+        break;
     }
   }
 
   move() {
-    // Move to a random position within the left side
-    this.position.x = random(50, splitLine - 50);
-    this.position.y = random(height / 4, (3 * height) / 4);
+    // Move to a random position within the top side
+    this.position.x = random(-width / 4, width / 4);
+    this.position.y = random(-height / 2 + 50, splitLine - 50);
   }
 
   startMoving() {
     // Set random velocity to start moving and bouncing
-    this.velocity = createVector(random(-3, 3), random(-3, 3));
+    this.velocity = createVector(random(-3, 3), random(-3, 3), random(-3, 3));
   }
 
   collaborate() {
     // Move towards the center line to symbolize collaboration
-    let target = createVector(splitLine, height / 2);
+    let target = createVector(0, splitLine, 0);
     this.velocity = p5.Vector.sub(target, this.position).setMag(2);
     this.isHarmonizing = true;
   }
 
   display() {
+    push();
+    translate(this.position.x, this.position.y, this.position.z);
     fill(this.color);
     noStroke();
 
-    if (this.shape === 'circle') {
-      ellipse(this.position.x, this.position.y, this.pulseSize, this.pulseSize);
-    } else if (this.shape === 'triangle') {
-      triangle(
-        this.position.x, this.position.y - this.pulseSize / 2,
-        this.position.x - this.pulseSize / 2, this.position.y + this.pulseSize / 2,
-        this.position.x + this.pulseSize / 2, this.position.y + this.pulseSize / 2
-      );
-    } else if (this.shape === 'square') {
-      rectMode(CENTER);
-      rect(this.position.x, this.position.y, this.pulseSize, this.pulseSize);
+    if (this.shape === 'sphere') {
+      sphere(this.pulseSize / 2);
+    } else if (this.shape === 'box') {
+      box(this.pulseSize);
     }
 
     // Add aura effect for strong side
     if (this.strong && !this.isHarmonizing) {
       noFill();
-      stroke(this.color);
+      specularMaterial(this.color);
       strokeWeight(2);
       for (let i = 1; i <= 3; i++) {
-        ellipse(this.position.x, this.position.y, this.pulseSize + i * 10, this.pulseSize + i * 10);
+        push();
+        sphere(this.pulseSize / 2 + i * 10);
+        pop();
       }
     }
+    pop();
   }
 }
 
