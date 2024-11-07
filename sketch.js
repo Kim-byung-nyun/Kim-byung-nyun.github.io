@@ -19,9 +19,9 @@ let keywords = [
 ];
 
 
-/*function preload() {
+function preload() {
   sound = loadSound('sound.mp3');
-}*/
+}
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
@@ -41,7 +41,7 @@ function setup() {
   }
 
   // Play sound and make it loop
-  //sound.loop();
+  sound.loop();
 
   // Create input for keyword
   keywordInput = createInput();
@@ -217,7 +217,7 @@ class Figure {
         this.shape = random(['sphere', 'cone', 'box']);
         break;
       case 'belonging':
-        this.position = createVector(width / 2 + random(-20, 20), height / 2 + random(-20, 20));
+        this.position = createVector(width /100 + random(-20, 20), height / 100 + random(-20, 20));
         this.color = color(70, 130, 180, 200); // Steel blue for belonging
         break;
       case 'strength':
