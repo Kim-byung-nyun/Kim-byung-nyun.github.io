@@ -41,7 +41,7 @@ function setup() {
   }
 
   // Play sound and make it loop
-  sound.loop();
+  sound.start();
 
   // Create input for keyword
   keywordInput = createInput();
