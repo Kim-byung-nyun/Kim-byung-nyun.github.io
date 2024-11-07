@@ -19,9 +19,9 @@ let keywords = [
 ];
 
 
-/*function preload() {
+function preload() {
   sound = loadSound('sound.mp3');
-}*/
+}
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
@@ -41,7 +41,7 @@ function setup() {
   }
 
   // Play sound and make it loop
-  //sound.play();
+  sound.play();
 
   // Create input for keyword
   keywordInput = createInput();
