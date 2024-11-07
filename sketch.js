@@ -6,6 +6,18 @@ let shatter = false;
 let sound;
 let keywordInput;
 let currentKeyword = "";
+let keywords = [
+  'resilience',
+  'unity',
+  'diversity',
+  'belonging',
+  'strength',
+  'visibility',
+  'heritage',
+  'empowerment',
+  'inclusivity'
+];
+
 
 /*function preload() {
   sound = loadSound('sound.mp3');
@@ -36,6 +48,25 @@ function setup() {
   keywordInput.position(10, 10);
   keywordInput.size(200);
   keywordInput.input(handleKeywordInput);
+
+
+  // Create buttons for keywords
+  let buttonX = 10;
+  let buttonY = 50;
+  let buttonWidth = 100;
+  let buttonHeight = 30;
+  let buttonsPerRow = 3;
+  for (let i = 0; i < keywords.length; i++) {
+    let btn = createButton(keywords[i]);
+    let btnX = buttonX + (i % buttonsPerRow) * (buttonWidth + 10);
+    let btnY = buttonY + floor(i / buttonsPerRow) * (buttonHeight + 10);
+    btn.position(btnX, btnY);
+    btn.size(buttonWidth, buttonHeight);
+    btn.mousePressed(() => {
+      keywordInput.value(keywords[i]);
+      handleKeywordInput();
+    });
+  }
 }
 
 function draw() {
@@ -254,5 +285,6 @@ class Figure {
     pop();
   }
 }
+
 
 
